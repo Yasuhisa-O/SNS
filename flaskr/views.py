@@ -18,6 +18,7 @@ from flaskr.forms import (
     ForgotPasswordForm, UserForm, ChangePasswordForm,
     UserSearchForm, ConnectForm, MessageForm
 )
+from flaskr.utils.message_format import make_message_format
 
 bp = Blueprint('app', __name__, url_prefix='')
 
@@ -224,7 +225,14 @@ def message(id):
 def message_ajax():
     user_id = request.args.get('user_id',-1, type=int)
     #まだ読んでいない相手からのメッセージを取得する
-    return jsonify(data='<p>Hello</p>')
+    user = User.select_user_by_id(user_id)
+    not_read_messages = Message.select_not_read_messages(user_id, current_user.get_id())
+    not_read_messages_ids = [message.id for message in not_read_messages]
+    if not_read_messages_ids:
+        with db.session.begin(nested=True):
+            Message.update_is_read_by_ids(not_read_messages_ids)
+        db.session.commit()
+    return jsonify(data=make_message_format(user, not_read_messages))
 
 @bp.app_errorhandler(404)
 def page_not_found(e):
