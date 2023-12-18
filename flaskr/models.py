@@ -46,11 +46,11 @@ class User(UserMixin, db.Model):
     @classmethod
     def select_user_by_id(cls, id):
         return cls.query.get(id)
-    
+
     def save_new_password(self, new_password):
         self.password = generate_password_hash(new_password)
         self.is_active = True
-    
+
     # UserConnectと紐づけます　outer join
     @classmethod
     def search_by_name(cls, username):
@@ -77,7 +77,7 @@ class User(UserMixin, db.Model):
             user_connect1.status.label("joined_status_to_from"),
             user_connect2.status.label("joined_status_from_to")
         ).all()
-    
+
     @classmethod
     def select_friends(cls):
         return cls.query.join(
@@ -158,7 +158,7 @@ class PasswordResetToken(db.Model):
         )
         db.session.add(new_token)
         return token
-    
+
     @classmethod
     def get_user_id_by_token(cls, token):
         now = datetime.now()
@@ -167,7 +167,7 @@ class PasswordResetToken(db.Model):
             return record.user_id
         else:
             return None
-        
+
 
     @classmethod
     def delete_token(cls, token):
@@ -202,7 +202,7 @@ class UserConnect(db.Model):
             from_user_id = from_user_id,
             to_user_id = current_user.get_id()
         ).first()
-    
+
     def update_status(self):
         self.status = 2
         self.update_at = datetime.now()
@@ -244,7 +244,7 @@ class Message(db.Model):
     )
     create_at = db.Column(db.DateTime, default=datetime.now)
     update_at = db.Column(db.DateTime, default=datetime.now)
-    
+
     def __init__(self, from_user_id, to_user_id, message):
         self.from_user_id = from_user_id
         self.to_user_id = to_user_id
@@ -252,7 +252,7 @@ class Message(db.Model):
 
     def create_message(self):
         db.session.add(self)
-    
+
     @classmethod
     def get_friend_messages(cls, id1, id2):
         return cls.query.filter(
@@ -267,3 +267,10 @@ class Message(db.Model):
                 )
             )
         ).order_by(cls.id).all()
+
+    @classmethod
+    def update_is_read_by_ids(cls, ids):
+        cls.query.filter(cls.id.in_(ids)).update(
+            {'is_read':1},
+            synchronize_session='fetch'
+        )

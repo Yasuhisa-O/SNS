@@ -8,10 +8,16 @@
     height: 100px;
 }
 
+.user-image-mini {
+	width: 50px;
+	height: 50px;
+}
+
 .speech-bubble-dest {
 	position: relative;
 	background: #91a0a1;
 	border-radius: .4em;
+	margin-bottom: 20px;
 }
 
 .speech-bubble-dest:after {
@@ -32,6 +38,7 @@
 	position: relative;
 	background: #4bc5ce;
 	border-radius: .4em;
+	margin-bottom: 20px;
 }
 
 .speech-bubble-self:after {
