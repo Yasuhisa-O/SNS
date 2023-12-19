@@ -1,8 +1,8 @@
-"""empty message
+"""add message
 
-Revision ID: 06a587d4b30c
+Revision ID: 2f6af9bfb11c
 Revises: 
-Create Date: 2023-12-17 17:59:48.253842
+Create Date: 2023-12-18 21:49:59.999412
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '06a587d4b30c'
+revision = '2f6af9bfb11c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -38,6 +38,7 @@ def upgrade():
     sa.Column('from_user_id', sa.Integer(), nullable=True),
     sa.Column('to_user_id', sa.Integer(), nullable=True),
     sa.Column('is_read', sa.Boolean(), nullable=True),
+    sa.Column('is_checked', sa.Boolean(), nullable=True),
     sa.Column('message', sa.Text(), nullable=True),
     sa.Column('create_at', sa.DateTime(), nullable=True),
     sa.Column('update_at', sa.DateTime(), nullable=True),
@@ -51,7 +52,7 @@ def upgrade():
 
     op.create_table('password_reset_tokens',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('token', sa.String(length=64), server_default='<function uuid4 at 0x00000141F8FE2840>', nullable=True),
+    sa.Column('token', sa.String(length=64), server_default='<function uuid4 at 0x0000024BD41E2840>', nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('expire_at', sa.DateTime(), nullable=True),
     sa.Column('create_at', sa.DateTime(), nullable=True),

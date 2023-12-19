@@ -3,7 +3,7 @@ from flaskr import db, login_manager
 from flask_bcrypt import generate_password_hash, check_password_hash
 from flask_login import UserMixin, current_user
 from sqlalchemy.orm import aliased
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, desc
 
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -239,6 +239,10 @@ class Message(db.Model):
     is_read = db.Column(
         db.Boolean, default=False
     )
+    # 既読のものを確認したか
+    is_checked = db.Column(
+        db.Boolean, default=False
+    )
     message = db.Column(
         db.Text
     )
@@ -254,7 +258,7 @@ class Message(db.Model):
         db.session.add(self)
 
     @classmethod
-    def get_friend_messages(cls, id1, id2):
+    def get_friend_messages(cls, id1, id2, offset_value=0,limit_value=100):
         return cls.query.filter(
             or_(
                 and_(
@@ -266,12 +270,19 @@ class Message(db.Model):
                     cls.to_user_id == id1
                 )
             )
-        ).order_by(cls.id).all()
+        ).order_by(desc(cls.id)).offset(offset_value).limit(limit_value).all()
 
     @classmethod
     def update_is_read_by_ids(cls, ids):
         cls.query.filter(cls.id.in_(ids)).update(
-            {'is_read':1},
+            {'is_read': 1},
+            synchronize_session='fetch'
+        )
+
+    @classmethod
+    def update_is_checked_by_ids(cls, ids):
+        cls.query.filter(cls.id.in_(ids)).update(
+            {'is_checked': 1},
             synchronize_session='fetch'
         )
 
@@ -282,5 +293,16 @@ class Message(db.Model):
                 cls.from_user_id == from_user_id,
                 cls.to_user_id == to_user_id,
                 cls.is_read == 0
+            )
+        ).order_by(cls.id).all()
+
+    @classmethod
+    def select_not_checked_messages(cls, from_user_id, to_user_id):
+        return cls.query.filter(
+            and_(
+                cls.from_user_id == from_user_id,
+                cls.to_user_id == to_user_id,
+                cls.is_read == 1,
+                cls.is_checked == 0
             )
         ).order_by(cls.id).all()

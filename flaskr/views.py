@@ -18,7 +18,7 @@ from flaskr.forms import (
     ForgotPasswordForm, UserForm, ChangePasswordForm,
     UserSearchForm, ConnectForm, MessageForm
 )
-from flaskr.utils.message_format import make_message_format
+from flaskr.utils.message_format import make_message_format, make_old_message_format
 
 bp = Blueprint('app', __name__, url_prefix='')
 
@@ -201,9 +201,17 @@ def message(id):
     if not UserConnect.is_friend(id):
         return redirect(url_for('app.home'))
     form = MessageForm(request.form)
+    #自分と相手のやりとりのメッセージを取得
     messages = Message.get_friend_messages(current_user.get_id(), id)
     user = User.select_user_by_id(id)
+    #まだ読まれていないが、新たに読まれるメッセージ
     read_message_ids = [message.id for message in messages if (not message.is_read) and (message.from_user_id == int(id))]
+    #すでに読まれていて、かつまだチェックしていない自分のメッセージをチェック
+    not_checked_message_ids = [message.id for message in messages if message.is_read and (not message.is_checked) and (message.from_user_id == int(current_user.get_id()))]
+    if not_checked_message_ids:
+        with db.session(nested=True):
+            Message.update_is_checked_by_ids(not_checked_message_ids)
+        db.session.commit()
     if read_message_ids:
         with db.session.begin(nested=True):
             Message.update_is_read_by_ids(read_message_ids)
@@ -223,16 +231,35 @@ def message(id):
 @bp.route('/message_ajax', methods=['GET'])
 @login_required
 def message_ajax():
-    user_id = request.args.get('user_id',-1, type=int)
+    user_id = request.args.get('user_id', -1, type=int)
     #まだ読んでいない相手からのメッセージを取得する
     user = User.select_user_by_id(user_id)
     not_read_messages = Message.select_not_read_messages(user_id, current_user.get_id())
-    not_read_messages_ids = [message.id for message in not_read_messages]
-    if not_read_messages_ids:
+    not_read_message_ids = [message.id for message in not_read_messages]
+    if not_read_message_ids:
         with db.session.begin(nested=True):
-            Message.update_is_read_by_ids(not_read_messages_ids)
+            Message.update_is_read_by_ids(not_read_message_ids)
         db.session.commit()
-    return jsonify(data=make_message_format(user, not_read_messages))
+    #すでに読まれた自分のメッセージでまだチェックしていないものを取得
+    not_checked_messages = Message.select_not_checked_messages(current_user.get_id(), user_id)
+    not_checked_message_ids = [not_checked_message.id for not_checked_message in not_checked_messages]
+    if not_checked_message_ids:
+        with db.session.begin(nested=True):
+            Message.update_is_checked_by_ids(not_checked_message_ids)
+        db.session.commit()
+
+    return jsonify(data=make_message_format(user, not_read_messages), checked_message_ids = not_checked_message_ids)
+
+@bp.route('/load_old_messages', methods=['GET'])
+@login_required
+def load_old_messages():
+    user_id = request.args.get('user_id', -1, type=int)
+    offset_value = request.args.get('offset_value', -1, type=int)
+    if user_id == -1 or offset_value == -1:
+        return
+    messages = Message.get_friend_messages(current_user.get_id(), user_id, offset_value * 100)
+    user = User.select_user_by_id(user_id)
+    return jsonify(data=make_old_message_format(user, messages))
 
 @bp.app_errorhandler(404)
 def page_not_found(e):
